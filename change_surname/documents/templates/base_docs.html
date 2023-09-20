@@ -1,0 +1,15 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{%block title%}{%endblock%}</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/examp.css' %}">
+</head>
+
+<body>
+  <a href="{% url 'search'%}"><div class="ttl"><p align="center">Документы для смены фамилии</p></div></a>
+  <br>
+  {%block cards%}{%endblock%}
+</body>
+</html>

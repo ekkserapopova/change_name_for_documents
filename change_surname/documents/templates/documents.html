@@ -1,0 +1,28 @@
+{%extends 'base_docs.html'%}
+
+{%block title%}Документы{%endblock%}
+
+{%block cards%}
+<form action="{% url 'search' %}" method="get">
+    <div class="container">
+    <input type="text" placeholder="Название документа" name="search_query" value="{{request.GET.search_query}}">
+    <button type="submit" class="search_btn">🔍</button>
+</div>
+      <br>
+      <br>
+</form>
+
+<div class="cards">
+    {% for var in items %}
+    <div class="card">
+        <img src="{{var.image}}">
+        <div class="docs_name">{{ var.title }}</div>
+        <div class="overview">{{var.overview}}</div>
+        <a href="{% url 'doc_url' var.name %}">
+            <button class="btn">Подробнее</button>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+    {%endblock%}

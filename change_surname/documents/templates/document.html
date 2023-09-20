@@ -1,0 +1,21 @@
+{% extends 'base_docs.html' %}
+{% load static %}
+
+{%block title%}{{ data.title|capfirst }}{%endblock%}
+
+{%block cards%}
+    <div class="sec_card">
+        <a href="{% url 'search'%}"><button class="btn">Перейти к документам</button></a>
+        <div class="content">
+            <img src="../{{data.image}}">
+            <div class="doc_name">{{ data.title }}</div>
+            <br>
+            <br>
+            <br>
+            <br>
+            <div class="description">{{data.description|linebreaksbr}}</div>
+
+        </div>
+    </div>
+    
+{%endblock%}
