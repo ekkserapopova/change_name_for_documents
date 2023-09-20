@@ -7,13 +7,15 @@
     <div class="sec_card">
         <a href="{% url 'search'%}"><button class="btn">Перейти к документам</button></a>
         <div class="content">
-            <img src="../{{data.image}}">
-            <div class="doc_name">{{ data.title }}</div>
+            {%if data.doc.image%}
+                <img src="../{{data.doc.image.url|slice:'26:200'}}">
+            {%endif%}
+            <div class="doc_name">{{ data.doc.title }}</div>
             <br>
             <br>
             <br>
             <br>
-            <div class="description">{{data.description|linebreaksbr}}</div>
+            <div class="description">{{data.doc.description|linebreaksbr}}</div>
 
         </div>
     </div>

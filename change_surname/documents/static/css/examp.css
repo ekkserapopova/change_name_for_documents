@@ -44,13 +44,15 @@ p{
 .card{
     background-color: #f4f4ef;
     width: 310px;
-    height: 400px;
+    height: 500px;
     border-radius: 5px;
     margin:20px;
     box-shadow: 0 20px 40px -14px #484848;
     transition: transform 0.5s;
     position: relative;
 }
+
+
 
 .card:hover{
     transform: scale(105%);
@@ -69,7 +71,7 @@ p{
     position: absolute;
     width: 90%;
     height: 7%;
-    margin-left: 5%;
+    left: 5%;
     bottom: 3%;
     border-radius: 3px;
     border: 1px solid #acbebe;
@@ -83,6 +85,25 @@ p{
     color: #f4f4ef;
     cursor: pointer;
     /* transform: scale(110%); */
+}
+
+.card .delete_btn{
+    position: absolute;
+    width: 90%;
+    height: 7%;
+    left: 5%;
+    bottom: 10%;
+    border-radius: 3px;
+    border: 1px solid #acbebe;
+    background-color: #f4f4ef; 
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    color: #20232a;
+}
+
+.delete_btn:hover{
+    background-color: #acbebe;
+    color: #f4f4ef;
+    cursor: pointer;
 }
 
 .container{
@@ -240,14 +261,3 @@ a{
     font-size: 18px;
     font-weight: 400;
 }
-  
-/*
-Для предоставления услуги по замене фамилии в свидетельстве о рождении следует заполнить заявку по смене фамилии:
-- указать Ваши данные (ФИО, номер+серия паспорта, кем выдан, дата выдачи, регистрация)
-- указать номер свидетельства о рождении
-- указать фамилию, на которую вы хотите заменить свою нынешнюю
-- указать причину, по которой вы зотите сменить фамилию
-
-В течение установленного срока после подачи заявления Вам будет вынесено решение по заявке.
-
-*/

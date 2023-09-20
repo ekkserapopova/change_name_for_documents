@@ -14,14 +14,19 @@
 
 <div class="cards">
     {% for var in items %}
+    {%if var.status == "active"%} 
     <div class="card">
-        <img src="{{var.image}}">
+        {%if var.image%}
+                <img src="{{var.image.url|slice:'26:200'}}" alt="">
+        {%endif%}
         <div class="docs_name">{{ var.title }}</div>
         <div class="overview">{{var.overview}}</div>
+        <a href="{% url 'deleted' var %}"><button class="delete_btn">Удалить</button></a>
         <a href="{% url 'doc_url' var.name %}">
             <button class="btn">Подробнее</button>
         </a>
     </div>
+    {%endif%}
     {% endfor %}
 </div>
 
