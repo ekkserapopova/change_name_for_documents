@@ -5,12 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb",
+            "name": "Python: Django",
+            "type": "python",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/<executable file>",
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "program": "${workspaceFolder}/change_surname/manage.py",
+            "args": [
+                "runserver"
+            ],
+            "django": true,
+            "justMyCode": true
         }
     ]
 }

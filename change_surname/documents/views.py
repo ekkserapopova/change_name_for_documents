@@ -1,11 +1,14 @@
 from django.shortcuts import render, redirect
 from .models import Docs
+import psycopg2
+from django.conf import settings
     
 def DeletedDoc(request, doc_id):
-    object = Docs.objects.get(id=int(doc_id))
-    object.status = 'deleted'
-    object.save()
-    docs = Docs.objects.all()
+    status = 'Удалено'
+    conn = psycopg2.connect(database=settings.DATABASES['default']['NAME'], user=settings.DATABASES['default']['USER'], password=settings.DATABASES['default']['PASSWORD'])
+    cursor = conn.cursor()
+    cursor.execute(f"UPDATE documents_docs SET status = '{status}' WHERE id = {doc_id}")
+    conn.commit()
     return redirect('search')
     
 
