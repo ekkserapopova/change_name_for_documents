@@ -1,21 +1,21 @@
 from django.shortcuts import render, redirect
-from .models import Docs
+from .models import Documents
 import psycopg2
 from django.conf import settings
     
 def DeletedDoc(request, doc_id):
-    status = 'Удалено'
+    status = 'deleted'
     conn = psycopg2.connect(database=settings.DATABASES['default']['NAME'], user=settings.DATABASES['default']['USER'], password=settings.DATABASES['default']['PASSWORD'])
     cursor = conn.cursor()
-    cursor.execute(f"UPDATE documents_docs SET status = '{status}' WHERE id = {doc_id}")
+    cursor.execute(f"UPDATE documents_documents SET document_status = '{status}' WHERE id = {doc_id}")
     conn.commit()
     return redirect('search')
     
 
 def GetDocument(request, name):
-    docs = Docs.objects.all()
+    docs = Documents.objects.all()
     for doc in docs:
-        if doc.name == name:
+        if doc.document_name == name:
             docs = doc
             break
     return render(request, 'document.html', {'data' : {
@@ -23,11 +23,12 @@ def GetDocument(request, name):
 }})
     
 def search(request):
-    docs = Docs.objects.all()
+    docs = Documents.objects.all()
+    print(docs)
     inputValue = request.GET.get('search_query') 
     query = inputValue
     if query:  
-        filtered_items = [doc for doc in docs if query.lower() in doc.title.lower() ]  
+        filtered_items = [doc for doc in docs if query.lower() in doc.document_title.lower() ]  
     else:
         filtered_items = docs  
 
