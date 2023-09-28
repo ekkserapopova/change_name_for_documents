@@ -2,24 +2,21 @@ from django.shortcuts import render, redirect
 from .models import Documents
 import psycopg2
 from django.conf import settings
+from django.db.models import Q
+
     
 def DeletedDoc(request, doc_id):
     status = 'deleted'
     conn = psycopg2.connect(database=settings.DATABASES['default']['NAME'], user=settings.DATABASES['default']['USER'], password=settings.DATABASES['default']['PASSWORD'])
     cursor = conn.cursor()
-    cursor.execute(f"UPDATE documents_documents SET document_status = '{status}' WHERE id = {doc_id}")
+    cursor.execute(f"UPDATE documents SET document_status = '{status}' WHERE document_id = {doc_id}")
     conn.commit()
     return redirect('search')
     
 
 def GetDocument(request, name):
-    docs = Documents.objects.all()
-    for doc in docs:
-        if doc.document_name == name:
-            docs = doc
-            break
     return render(request, 'document.html', {'data' : {
-        'doc': docs,
+        'doc': Documents.objects.get(document_name__exact=name),
 }})
     
 def search(request):
@@ -28,10 +25,11 @@ def search(request):
     inputValue = request.GET.get('search_query') 
     query = inputValue
     if query:  
-        filtered_items = [doc for doc in docs if query.lower() in doc.document_title.lower() ]  
+        # filtered_items = [doc for doc in docs if query.lower() in doc.document_title.lower() ]  
+        filtered_items = Documents.objects.filter(
+            # document_title__icontains = query
+            Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())
+        )
     else:
-        filtered_items = docs  
-
+        filtered_items = Documents.objects.all()  
     return render(request, 'documents.html', {'items': filtered_items,})
-
-# Create your views here.

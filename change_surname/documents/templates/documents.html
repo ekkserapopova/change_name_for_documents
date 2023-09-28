@@ -19,9 +19,12 @@
         {%if var.document_image%}
                 <img src="{{var.document_image.url|slice:'26:200'}}" alt="">
         {%endif%}
-        <div class="docs_name">{{ var.document_title }}</div>
+        <div class="docs_name">{{ var.document_title | capfirst}}</div>
         <div class="overview">{{var.document_overview}}</div>
-        <a href="{% url 'deleted' var.id %}"><button class="delete_btn">Удалить</button></a>
+        <form action="{% url 'deleted' var.document_id%}" method="post">
+            {% csrf_token %}
+            <button class="delete_btn">Удалить</button>
+        </form>
         <a href="{% url 'doc_url' var.document_name %}">
             <button class="btn">Подробнее</button>
         </a>

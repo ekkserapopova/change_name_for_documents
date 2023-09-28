@@ -10,7 +10,7 @@
             {%if data.doc.document_image%}
                 <img src="../{{data.doc.document_image.url|slice:'26:200'}}">
             {%endif%}
-            <div class="doc_name">{{ data.doc.document_title }}</div>
+            <div class="doc_name">{{ data.doc.document_title | capfirst}}</div>
             <br>
             <br>
             <br>
