@@ -25,7 +25,6 @@ def search(request):
     inputValue = request.GET.get('search_query') 
     query = inputValue
     if query:  
-        # filtered_items = [doc for doc in docs if query.lower() in doc.document_title.lower() ]  
         filtered_items = Documents.objects.filter(
             # document_title__icontains = query
             Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())
