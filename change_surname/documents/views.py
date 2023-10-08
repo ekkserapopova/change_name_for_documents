@@ -22,12 +22,12 @@ def GetDocument(request, name):
 def search(request):
     docs = Documents.objects.all()
     print(docs)
-    inputValue = request.GET.get('search_query') 
+    inputValue = request.GET.get('search_query')
     query = inputValue
     if query:  
         filtered_items = Documents.objects.filter(
-            # document_title__icontains = query
-            Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())
+            Q(document_status = 'active'),
+            Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())|Q(document_title__contains = query)
         )
     else:
         filtered_items = Documents.objects.all()  

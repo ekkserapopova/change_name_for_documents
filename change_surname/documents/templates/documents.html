@@ -14,7 +14,6 @@
 
 <div class="cards">
     {% for var in items %}
-    {%if var.document_status == "active"%} 
     <div class="card">
         {%if var.document_image%}
                 <img src="{{var.document_image.url|slice:'26:200'}}" alt="">
@@ -29,7 +28,6 @@
             <button class="btn">Подробнее</button>
         </a>
     </div>
-    {%endif%}
     {% endfor %}
 </div>
 
