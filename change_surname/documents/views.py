@@ -30,5 +30,7 @@ def search(request):
             Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())|Q(document_title__contains = query)
         )
     else:
-        filtered_items = Documents.objects.all()  
+        filtered_items = Documents.objects.filter(
+            Q(document_status = 'active'),
+        ) 
     return render(request, 'documents.html', {'items': filtered_items,})
