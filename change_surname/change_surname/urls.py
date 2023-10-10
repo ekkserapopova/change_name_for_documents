@@ -18,6 +18,7 @@ urlpatterns = [
     # path(r'applications/post/', views.post_application, name='applications-post'),    
     path(r'applications/<int:pk>/put/moderator/', views.put_applications_moderator, name='application-put_by-moderator'),
     path(r'applications/<int:pk>/put/client/', views.put_applications_client, name='application-put_by-moderator'),
+    path(r'applications/<int:pk>/put/', views.put_application),
     path(r'applications/<int:pk>/delete/', views.delete_application, name='application-delete'),
 
     # path(r'docsapps/', views.get_documents_apps),

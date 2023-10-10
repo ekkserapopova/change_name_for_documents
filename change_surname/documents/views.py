@@ -6,13 +6,11 @@ from .models import Documents, NameChangeApplications, DocumentsApplications
 from rest_framework.decorators import api_view
 from datetime import datetime
 from minio import Minio
-from django.conf import settings
-from minio.commonconfig import REPLACE, CopySource
+from django.db.models import Q
 
-
-client = Minio(endpoint="localhost:9000",   # адрес сервера
-               access_key='minio',          # логин админа
-               secret_key='minio124',       # пароль админа
+client = Minio(endpoint="localhost:9000",   
+               access_key='minio',          
+               secret_key='minio124',       
                secure=False)  
 
 
@@ -22,7 +20,15 @@ def get_active_documents(request, format=None):
     Возвращает список активных документов 
     """
     print('get')
-    documents = Documents.objects.filter(document_status = 'active').order_by('document_title')
+    query = request.GET.get("title")
+    if query:
+        documents = Documents.objects.filter(
+            Q(document_status = 'active'),
+            Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())|Q(document_title__contains = query)
+        ).order_by('document_title')
+    else:
+        documents = Documents.objects.filter(document_status = 'active').order_by('document_title')
+    
     for doc in documents:
         url = client.get_presigned_url(
             "GET",
@@ -50,6 +56,10 @@ def get_document(request, pk, format=None):
         serializer = DocumentsSerializer(document)
         print(document.document_image)
         return Response(serializer.data)
+ 
+# @api_view(['Get'])    
+# def search_documents(request):
+    
 
 @api_view(['Post']) 
 def post_document(request, format=None):    
@@ -137,19 +147,73 @@ def get_applications(request, format=None):
     Возвращает список заявок
     """
     print('get')
-    stocks = NameChangeApplications.objects.all()
-    serializer = ApplicationsSerializer(stocks, many=True)
+    startdate = request.GET.get("startdate")
+    enddate = request.GET.get("enddate")
+    statuses = request.GET.get("status")
+    applications = NameChangeApplications.objects.all()
+    
+    if startdate:
+        applications = applications.filter(
+            Q(date_of_application_acceptance__gte=startdate)
+        )
+        
+    if enddate:
+        applications = applications.filter(
+            Q(date_of_application_acceptance__lte=enddate)
+        )
+        
+    if statuses:
+        statuses=statuses.split(",")
+        filters = Q()
+        for status in statuses:
+            filters |= Q(application_status=status)
+        applications = applications.filter(
+            filters
+        )
+    # applications.order_by('date_of_application_acceptance')
+    serializer = ApplicationsSerializer(applications, many=True)
     return Response(serializer.data)
 
 @api_view(['Get']) 
 def get_application(request, pk, format=None):
-    stock = get_object_or_404(NameChangeApplications, pk=pk)
+    application = get_object_or_404(NameChangeApplications, pk=pk)
     if request.method == 'GET':
         """
         Возвращает информацию об одной заявке
         """
-        serializer = ApplicationsSerializer(stock)
+        serializer = ApplicationsSerializer(application)
+        docs_apps = DocumentsApplications.objects.filter(application_id=pk)
+        serializer_docs_apps = DocumentsApplicationsSerializer(docs_apps, many=True)
+        print(type(docs_apps[0].document_id_id))
+        filters = Q()
+        for doc_app in docs_apps:
+            filters |= Q(document_id=doc_app.document_id_id)
+            print(filters)
+        documents = Documents.objects.filter(filters)
+        serializer_documents = DocumentsSerializer(documents, many=True)
+        
+        docs_apps_data = {
+            'application': serializer.data,
+            'documents': serializer_documents.data
+        }
+        
+        return Response(docs_apps_data)
+    
+@api_view(['PUT'])
+def put_application(request, pk, format=None):
+    """
+    Обновляет информацию в заявке - surname and reason
+    """
+    application = get_object_or_404(NameChangeApplications, pk=pk)
+    serializer = ApplicationsSerializer(application, data=request.data, partial=True)
+    if application.application_status != 'created':
+        return Response({"error": "Invalid status value."}, status=400)
+    if serializer.is_valid():
+        serializer.save()
         return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
 @api_view(['PUT']) 
 def put_applications_moderator(request, pk, format=None):
@@ -157,38 +221,38 @@ def put_applications_moderator(request, pk, format=None):
     Обновляет информацию о документе модератор
     """
     application = get_object_or_404(NameChangeApplications, pk=pk)
-    if request.data.get('application_status') not in ['in_progress', 'completed', 'canceled']:
+    print(application.application_status)
+    if request.data['application_status'] not in ['completed', 'canceled'] or application.application_status == 'created':
         return Response({"error": "Invalid status value."}, status=400)
-    application.application_status = request.data.get('application_status')
-    if request.data.get('application_status') in ['completed', 'canceled']:
-        application.date_of_application_completion = datetime.now()
-    else:
-        application.date_of_application_acceptance = datetime.now()
-    serializer = ApplicationsSerializer(application, data=request.data)
+    application.application_status = request.data['application_status']
+    application.date_of_application_completion = datetime.now()
+    serializer = ApplicationsSerializer(application, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
-   
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(['PUT']) 
 def put_applications_client(request, pk, format=None):
     """
     Обновляет информацию о документе клиент
     """
     application = get_object_or_404(NameChangeApplications, pk=pk)
-    if request.data.get('application_status') not in ['created', 'deleted']:
+    if request.data['application_status'] != 'in_progress' or application.application_status != 'created':
         return Response({"error": "Invalid status value."}, status=400)
-    if request.data.get('application_status') == 'deleted':
-        application.date_of_application_completion = datetime.now()
-    application.application_status = request.data.get('application_status')
-    serializer = ApplicationsSerializer(application, data=request.data)
+    application.application_status = request.data['application_status']
+    application.date_of_application_acceptance = datetime.now()
+    serializer = ApplicationsSerializer(application, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['Delete']) 
 def delete_application(request, pk, formate=None):
     application = get_object_or_404(NameChangeApplications, pk=pk)
     application.application_status = 'deleted'
+    application.date_of_application_completion = datetime.now()
     application.save()
     serializer = ApplicationsSerializer(application) 
     return Response(serializer.data)
