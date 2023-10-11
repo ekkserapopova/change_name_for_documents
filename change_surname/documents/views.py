@@ -15,7 +15,7 @@ client = Minio(endpoint="localhost:9000",
 
 
 @api_view(['Get']) 
-def get_active_documents(request, format=None):
+def get_documents(request, format=None):
     """
     Возвращает список активных документов 
     """
@@ -56,10 +56,6 @@ def get_document(request, pk, format=None):
         serializer = DocumentsSerializer(document)
         print(document.document_image)
         return Response(serializer.data)
- 
-# @api_view(['Get'])    
-# def search_documents(request):
-    
 
 @api_view(['Post']) 
 def post_document(request, format=None):    
@@ -89,7 +85,7 @@ def put_document(request, pk, format=None):
     """
     print('put')
     document = get_object_or_404(Documents, pk=pk)
-    serializer = DocumentsSerializer(document, data=request.data)
+    serializer = DocumentsSerializer(document, data=request.data, partial=True)
     if serializer.is_valid():
         if document.document_image != request.data['document_image']:
             client.remove_object("documents", f"{document.document_image}")
@@ -170,34 +166,51 @@ def get_applications(request, format=None):
         applications = applications.filter(
             filters
         )
-    # applications.order_by('date_of_application_acceptance')
-    serializer = ApplicationsSerializer(applications, many=True)
-    return Response(serializer.data)
+    result = []
+    for application in applications:
+        serializer = ApplicationsSerializer(application)
+        docs_apps = DocumentsApplications.objects.filter(application_id=application.application_id)
+        docs_apps_serializer = DocumentsApplicationsSerializer(docs_apps, many=True)
+        filters = Q()
+        for doc_app in docs_apps:
+            filters |= Q(document_id=doc_app.document_id_id)
+        if filters == Q():
+            documents = {}
+        else:
+            documents = Documents.objects.filter(filters)
+        serializer_documents = DocumentsSerializer(documents, many=True)
+        docs_apps_data = {
+            'application': serializer.data,
+            'documents': serializer_documents.data
+        }       
+        result.append(docs_apps_data)
+    return Response(result)
 
 @api_view(['Get']) 
 def get_application(request, pk, format=None):
     application = get_object_or_404(NameChangeApplications, pk=pk)
-    if request.method == 'GET':
-        """
-        Возвращает информацию об одной заявке
-        """
-        serializer = ApplicationsSerializer(application)
-        docs_apps = DocumentsApplications.objects.filter(application_id=pk)
-        serializer_docs_apps = DocumentsApplicationsSerializer(docs_apps, many=True)
-        print(type(docs_apps[0].document_id_id))
-        filters = Q()
-        for doc_app in docs_apps:
-            filters |= Q(document_id=doc_app.document_id_id)
-            print(filters)
+    """
+    Возвращает информацию об одной заявке
+    """
+    serializer = ApplicationsSerializer(application)
+    docs_apps = DocumentsApplications.objects.filter(application_id=pk)
+    serializer_docs_apps = DocumentsApplicationsSerializer(docs_apps, many=True)
+    filters = Q()
+    for doc_app in docs_apps:
+        filters |= Q(document_id=doc_app.document_id_id)
+    print(filters)
+    if filters != Q():
         documents = Documents.objects.filter(filters)
-        serializer_documents = DocumentsSerializer(documents, many=True)
+    else:
+        documents = {}
+    serializer_documents = DocumentsSerializer(documents, many=True)
+    
+    docs_apps_data = {
+        'application': serializer.data,
+        'documents': serializer_documents.data
+    }
         
-        docs_apps_data = {
-            'application': serializer.data,
-            'documents': serializer_documents.data
-        }
-        
-        return Response(docs_apps_data)
+    return Response(docs_apps_data)
     
 @api_view(['PUT'])
 def put_application(request, pk, format=None):
