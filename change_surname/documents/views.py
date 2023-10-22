@@ -87,13 +87,15 @@ def put_document(request, pk, format=None):
     document = get_object_or_404(Documents, pk=pk)
     serializer = DocumentsSerializer(document, data=request.data, partial=True)
     if serializer.is_valid():
-        if document.document_image != request.data['document_image']:
-            client.remove_object("documents", f"{document.document_image}")
-            client.fput_object(bucket_name='documents',  
-                                object_name=f"{serializer.validated_data['document_name']}.jpg",  
-                                file_path=serializer.validated_data['document_image'])
-            serializer.validated_data['document_image'] = f"{serializer.validated_data['document_name']}.jpg"
-        serializer.save()
+        try:
+            if document.document_image != request.data['document_image']:
+                client.remove_object("documents", f"{document.document_image}")
+                client.fput_object(bucket_name='documents',  
+                                    object_name=f"{document.document_name}.jpg",  
+                                    file_path=serializer.validated_data['document_image'])
+                serializer.validated_data['document_image'] = f"{document.document_name}.jpg"
+        except:
+            serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -220,7 +222,7 @@ def put_application(request, pk, format=None):
     application = get_object_or_404(NameChangeApplications, pk=pk)
     serializer = ApplicationsSerializer(application, data=request.data, partial=True)
     if application.application_status != 'created':
-        return Response({"error": "Invalid status value."}, status=400)
+        return Response({"error": "Неверный статус."}, status=400)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
@@ -236,7 +238,7 @@ def put_applications_moderator(request, pk, format=None):
     application = get_object_or_404(NameChangeApplications, pk=pk)
     print(application.application_status)
     if request.data['application_status'] not in ['completed', 'canceled'] or application.application_status == 'created':
-        return Response({"error": "Invalid status value."}, status=400)
+        return Response({"error": "Неверный статус."}, status=400)
     application.application_status = request.data['application_status']
     application.date_of_application_completion = datetime.now()
     serializer = ApplicationsSerializer(application, data=request.data, partial=True)
@@ -252,7 +254,7 @@ def put_applications_client(request, pk, format=None):
     """
     application = get_object_or_404(NameChangeApplications, pk=pk)
     if request.data['application_status'] != 'in_progress' or application.application_status != 'created':
-        return Response({"error": "Invalid status value."}, status=400)
+        return Response({"error": "Неверный статус."}, status=400)
     application.application_status = request.data['application_status']
     application.date_of_application_acceptance = datetime.now()
     serializer = ApplicationsSerializer(application, data=request.data, partial=True)
@@ -264,6 +266,8 @@ def put_applications_client(request, pk, format=None):
 @api_view(['Delete']) 
 def delete_application(request, pk, formate=None):
     application = get_object_or_404(NameChangeApplications, pk=pk)
+    if application.application_status != 'created':
+         return Response({"error": "Неверный статус."}, status=400)       
     application.application_status = 'deleted'
     application.date_of_application_completion = datetime.now()
     application.save()
