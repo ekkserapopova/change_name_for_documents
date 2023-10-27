@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 
 class DocumentsSerializer(serializers.ModelSerializer):
     class Meta:
+        # title_lower = serializers.CharField()
         # Модель, которую мы сериализуем
         model = Documents
         # Поля, которые мы сериализуем

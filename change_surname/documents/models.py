@@ -28,6 +28,7 @@ class Documents(models.Model):
     document_overview = models.TextField(blank=True)
     document_description = models.TextField(blank=True)
     document_image = models.CharField(max_length=10000)
+    document_price = models.FloatField()
     document_status = models.CharField(max_length=20,choices=STATUS_DOCS)
     
     class Meta:
@@ -72,8 +73,8 @@ class NameChangeApplications(models.Model):
         return f"{self.application_id}"
     
 class DocumentsApplications(models.Model):
-    application_id = models.ForeignKey('NameChangeApplications', models.DO_NOTHING)
-    document_id = models.ForeignKey('Documents', models.DO_NOTHING)
+    application_id = models.ForeignKey('NameChangeApplications', models.DO_NOTHING, primary_key=False)
+    document_id = models.ForeignKey('Documents', models.DO_NOTHING, primary_key=False)
     
     def __str__(self):
         return f"{self.application_id}, {self.document_id}"
@@ -81,6 +82,5 @@ class DocumentsApplications(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['application_id', 'document_id'], name='pk')
         ]
-        # unique_together = (('application_id', 'document_id'),)
         db_table = 'documents_applications'
         verbose_name_plural = "DocumentsApplications"

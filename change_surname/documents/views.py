@@ -6,7 +6,8 @@ from .models import Documents, NameChangeApplications, DocumentsApplications
 from rest_framework.decorators import api_view
 from datetime import datetime
 from minio import Minio
-from django.db.models import Q
+from django.db.models import Q, CharField
+from django.db.models.functions import Lower,Upper
 
 client = Minio(endpoint="localhost:9000",   
                access_key='minio',          
@@ -24,7 +25,7 @@ def get_documents(request, format=None):
     if query:
         documents = Documents.objects.filter(
             Q(document_status = 'active'),
-            Q(document_title__contains = query.lower())|Q(document_title__contains = query.upper())|Q(document_title__contains = query)
+            Q(document_title__icontains = query.lower())
         ).order_by('document_title')
     else:
         documents = Documents.objects.filter(document_status = 'active').order_by('document_title')

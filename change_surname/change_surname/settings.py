@@ -92,7 +92,7 @@ WSGI_APPLICATION = 'change_surname.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'name_change',
+        'NAME': 'surnames',
         'USER': 'postgres',
         'PASSWORD': '033012',
         'HOST': 'localhost',
