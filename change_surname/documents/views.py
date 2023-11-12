@@ -31,6 +31,14 @@ def get_documents(request, format=None):
         documents = Documents.objects.filter(document_status = 'active').order_by('document_title')
     
     for doc in documents:
+        if doc.document_image == 'not_found.jpg':
+            url = client.get_presigned_url(
+                "GET",
+                "documents",
+                "not_found.jpg",
+            )
+            doc.document_image = url
+            continue
         url = client.get_presigned_url(
             "GET",
             "documents",
@@ -48,11 +56,18 @@ def get_document(request, pk, format=None):
         """
         Возвращает информацию об одном документе
         """
-        url = client.get_presigned_url(
+        if document.document_image == 'not_found.jpg':
+            url = client.get_presigned_url(
+                "GET",
+                "documents",
+                "not_found.jpg",
+            )
+        else:
+            url = client.get_presigned_url(
             "GET",
             "documents",
             f"{document.document_name}.jpg",
-        )
+            )
         document.document_image = url
         serializer = DocumentsSerializer(document)
         print(document.document_image)
@@ -67,13 +82,21 @@ def post_document(request, format=None):
     serializer = DocumentsSerializer(data=request.data)
     if serializer.is_valid():
         try:
-            client.stat_object(bucket_name='documents',     
-                object_name=f"{serializer.validated_data['document_name']}.jpg")
+            if 'document_image' not in serializer.validated_data:
+                client.stat_object(bucket_name='documents',     
+                object_name=f"not_found.jpg")
+            else:
+                client.stat_object(bucket_name='documents',     
+                    object_name=f"{serializer.validated_data['document_name']}.jpg")
         except:
             client.fput_object(bucket_name='documents',  
                     object_name=f"{serializer.validated_data['document_name']}.jpg",  
                     file_path=serializer.validated_data['document_image'])
-        serializer.validated_data['document_image'] = f"{serializer.validated_data['document_name']}.jpg"
+            
+        if 'document_image' not in serializer.validated_data:
+            serializer.validated_data['document_image'] = f"not_found.jpg"
+        else:
+            serializer.validated_data['document_image'] = f"{serializer.validated_data['document_name']}.jpg"
         serializer.save()
         
         return Response(serializer.data, status=status.HTTP_201_CREATED)
