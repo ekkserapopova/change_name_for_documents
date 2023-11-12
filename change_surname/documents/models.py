@@ -27,7 +27,7 @@ class Documents(models.Model):
     document_name = models.CharField(max_length=100, unique=True)
     document_overview = models.TextField(blank=True)
     document_description = models.TextField(blank=True)
-    document_image = models.CharField(max_length=10000)
+    document_image = models.CharField(max_length=10000, default='not_found.jpg')
     document_price = models.FloatField()
     document_status = models.CharField(max_length=20,choices=STATUS_DOCS)
     
