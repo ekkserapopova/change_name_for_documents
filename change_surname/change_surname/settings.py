@@ -12,17 +12,6 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
-# from storages.backends import minio as minio_storage
-
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_STORAGE_BUCKET_NAME = 'documents'
-AWS_ACCESS_KEY_ID = 'minio'
-AWS_SECRET_ACCESS_KEY = 'minio124'
-AWS_S3_ENDPOINT_URL = 'http://127.0.0.1:9000'
-
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,12 +36,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'django.contrib.staticfiles', #Необходим для  swagger ui's css/js файлов (По умолчанию включен)
     # # DRF
     'rest_framework',
 
     # Наше приложение
     'documents',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
