@@ -22,6 +22,8 @@ def get_documents(request, format=None):
     """
     print('get')
     query = request.GET.get("title")
+    min_price = request.GET.get("minprice")
+    max_price = request.GET.get("maxprice")
     if query:
         documents = Documents.objects.filter(
             Q(document_status = 'active'),
@@ -29,6 +31,12 @@ def get_documents(request, format=None):
         ).order_by('document_title')
     else:
         documents = Documents.objects.filter(document_status = 'active').order_by('document_title')
+        
+    if min_price:
+        documents = documents.filter(Q(document_price__gte = min_price))
+        
+    if max_price:
+        documents = documents.filter(Q(document_price__lte = max_price))
     
     for doc in documents:
         if doc.document_image == 'not_found.jpg':
