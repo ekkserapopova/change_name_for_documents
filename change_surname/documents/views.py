@@ -1,13 +1,21 @@
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from rest_framework import status
-from .serializers import DocumentsSerializer, ApplicationsSerializer, DocumentsApplicationsSerializer
-from .models import Documents, NameChangeApplications, DocumentsApplications
-from rest_framework.decorators import api_view
+from rest_framework import status, viewsets
+
+from .permitions import IsAdmin, IsManager
+from .serializers import DocumentsSerializer, ApplicationsSerializer, DocumentsApplicationsSerializer, UserSerializer
+from .models import CustomUser, Documents, NameChangeApplications, DocumentsApplications
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from datetime import datetime
 from minio import Minio
-from django.db.models import Q, CharField
-from django.db.models.functions import Lower,Upper
+from django.db.models import Q
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponse, JsonResponse
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from drf_yasg.utils import swagger_auto_schema
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+
 
 client = Minio(endpoint="localhost:9000",   
                access_key='minio',          
@@ -15,7 +23,10 @@ client = Minio(endpoint="localhost:9000",
                secure=False)  
 
 
+
 @api_view(['Get']) 
+@permission_classes([IsManager])
+@authentication_classes([])
 def get_documents(request, format=None):
     """
     Возвращает список активных документов 
@@ -56,6 +67,16 @@ def get_documents(request, format=None):
     serializer = DocumentsSerializer(documents, many=True)
     return Response(serializer.data)
 
+def method_permission_classes(classes):
+    def decorator(func):
+        def decorated_func(self, *args, **kwargs):
+            self.permission_classes = classes        
+            self.check_permissions(self.request)
+            return func(self, *args, **kwargs)
+        return decorated_func
+    return decorator
+
+@method_permission_classes((IsAdmin,))
 @api_view(['Get']) 
 def get_document(request, pk, format=None):
     document = get_object_or_404(Documents, pk=pk)
@@ -80,6 +101,7 @@ def get_document(request, pk, format=None):
         serializer = DocumentsSerializer(document)
         print(document.document_image)
         return Response(serializer.data)
+
 
 @api_view(['Post']) 
 def post_document(request, format=None):    
@@ -312,3 +334,87 @@ def delete_document_application(request, document_id, application_id, formate=No
     document_application.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
     
+class UserViewSet(viewsets.ModelViewSet):
+    """Класс, описывающий методы работы с пользователями
+    Осуществляет связь с таблицей пользователей в базе данных
+    """
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            permission_classes = [AllowAny]
+        elif self.action in ['list']:
+            permission_classes = [IsAdmin | IsManager]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
+
+
+    
+    
+class UserViewSet(viewsets.ModelViewSet):
+    """Класс, описывающий методы работы с пользователями
+    Осуществляет связь с таблицей пользователей в базе данных
+    """
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    model_class = CustomUser
+
+    def create(self, request):
+        """
+        Функция регистрации новых пользователей
+        Если пользователя c указанным в request email ещё нет, в БД будет добавлен новый пользователь.
+        """
+        if self.model_class.objects.filter(email=request.data['email']).exists():
+            return Response({'status': 'Exist'}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            print(serializer.data)
+            self.model_class.objects.create_user(email=serializer.data['email'],
+                                     password=serializer.data['password'],
+                                     is_superuser=serializer.data['is_superuser'],
+                                     is_staff=serializer.data['is_staff'])
+            return Response({'status': 'Success'}, status=200)
+        return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+class AuthBackend(object):
+    supports_object_permissions = True
+    supports_anonymous_user = True
+    supports_inactive_user = True
+    
+    def get_user(self, pk):
+        try:
+            return CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return None
+        
+    def authenticate(self, request, username, password):
+        try:
+            user = CustomUser.objects.get(Q(email=username))
+        except CustomUser.DoesNotExist:
+            return None
+        return user if user.check_password(password) else None
+    
+    
+    
+@permission_classes([AllowAny])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@csrf_exempt
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(['POST'])
+def login_view(request):
+    email = request.data["email"] # допустим передали username и password
+    password = request.data["password"]
+    auth = AuthBackend()
+    user = auth.authenticate(request, username=email, password=password)
+    print(user)
+    if user is not None:
+        login(request, user)
+        return HttpResponse("{'status': 'ok'}")
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+def logout_view(request):
+    logout(request)
+    return Response({'status': 'Success'})

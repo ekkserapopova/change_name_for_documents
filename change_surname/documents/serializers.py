@@ -1,11 +1,11 @@
 from .models import Documents, NameChangeApplications, DocumentsApplications
 from rest_framework import serializers
 from rest_framework.views import APIView
+from .models import CustomUser
 
 
 class DocumentsSerializer(serializers.ModelSerializer):
     class Meta:
-        # title_lower = serializers.CharField()
         # Модель, которую мы сериализуем
         model = Documents
         # Поля, которые мы сериализуем
@@ -24,3 +24,11 @@ class DocumentsApplicationsSerializer(serializers.ModelSerializer):
         model = DocumentsApplications
         # Поля, которые мы сериализуем
         fields = ["document_id", "application_id"]
+        
+class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
+    class Meta:
+        model = CustomUser
+        fields = ['email', 'password', 'is_staff', 'is_superuser']
+        # fields = "__all__"
