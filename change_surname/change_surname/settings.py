@@ -14,6 +14,7 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+CSRF_USE_SESSIONS = True
 
 
 # Quick-start development settings - unsuitable for production
@@ -51,6 +52,12 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ]
 }
+
+AUTHENTICATION_BACKENDS = [
+    'documents.views.AuthBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Оставьте этот класс, чтобы сохранить стандартную аутентификацию
+]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

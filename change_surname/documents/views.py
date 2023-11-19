@@ -15,6 +15,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from change_surname.settings import AUTHENTICATION_BACKENDS  
 
 
 client = Minio(endpoint="localhost:9000",   
@@ -22,11 +23,31 @@ client = Minio(endpoint="localhost:9000",
                secret_key='minio124',       
                secure=False)  
 
+class AuthBackend(SessionAuthentication, BasicAuthentication):
+    supports_object_permissions = True
+    supports_anonymous_user = True
+    supports_inactive_user = True
+    
+    def get_user(self, pk):
+        try:
+            return CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return None
+        
+    def authenticate(self, request, username, password):
+        try:
+            user = CustomUser.objects.get(Q(email=username))
+        except CustomUser.DoesNotExist:
+            return None
+        if user.check_password(password):
+            user.backend = f"{self.__module__}.{self.__class__.__name__}"  
+            return user
 
 
 @api_view(['Get']) 
+@csrf_protect
 @permission_classes([IsManager])
-@authentication_classes([])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
 def get_documents(request, format=None):
     """
     Возвращает список активных документов 
@@ -76,7 +97,7 @@ def method_permission_classes(classes):
         return decorated_func
     return decorator
 
-@method_permission_classes((IsAdmin,))
+# @method_permission_classes((IsAdmin,))
 @api_view(['Get']) 
 def get_document(request, pk, format=None):
     document = get_object_or_404(Documents, pk=pk)
@@ -334,21 +355,21 @@ def delete_document_application(request, document_id, application_id, formate=No
     document_application.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
     
-class UserViewSet(viewsets.ModelViewSet):
-    """Класс, описывающий методы работы с пользователями
-    Осуществляет связь с таблицей пользователей в базе данных
-    """
-    queryset = CustomUser.objects.all()
-    serializer_class = UserSerializer
+# class UserViewSet(viewsets.ModelViewSet):
+#     """Класс, описывающий методы работы с пользователями
+#     Осуществляет связь с таблицей пользователей в базе данных
+#     """
+#     queryset = CustomUser.objects.all()
+#     serializer_class = UserSerializer
 
-    def get_permissions(self):
-        if self.action in ['create']:
-            permission_classes = [AllowAny]
-        elif self.action in ['list']:
-            permission_classes = [IsAdmin | IsManager]
-        else:
-            permission_classes = [IsAdmin]
-        return [permission() for permission in permission_classes]
+#     def get_permissions(self):
+#         if self.action in ['create']:
+#             permission_classes = [AllowAny]
+#         elif self.action in ['list']:
+#             permission_classes = [IsAdmin | IsManager]
+#         else:
+#             permission_classes = [IsAdmin]
+#         return [permission() for permission in permission_classes]
 
 
     
@@ -378,30 +399,13 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Success'}, status=200)
         return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
-class AuthBackend(object):
-    supports_object_permissions = True
-    supports_anonymous_user = True
-    supports_inactive_user = True
-    
-    def get_user(self, pk):
-        try:
-            return CustomUser.objects.get(pk=pk)
-        except CustomUser.DoesNotExist:
-            return None
-        
-    def authenticate(self, request, username, password):
-        try:
-            user = CustomUser.objects.get(Q(email=username))
-        except CustomUser.DoesNotExist:
-            return None
-        return user if user.check_password(password) else None
-    
     
     
 @permission_classes([AllowAny])
-@authentication_classes([BasicAuthentication, SessionAuthentication])
-@csrf_exempt
+@authentication_classes([])
 @swagger_auto_schema(method='post', request_body=UserSerializer)
+@csrf_protect
+@csrf_exempt
 @api_view(['POST'])
 def login_view(request):
     email = request.data["email"] # допустим передали username и password
@@ -410,10 +414,15 @@ def login_view(request):
     user = auth.authenticate(request, username=email, password=password)
     print(user)
     if user is not None:
-        login(request, user)
-        return HttpResponse("{'status': 'ok'}")
+        login(request, user, backend=AUTHENTICATION_BACKENDS[0])
+        response_data = {"status": "ok"}
+
+        return JsonResponse(response_data)
+    
     else:
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+    
+
 
 def logout_view(request):
     logout(request)
