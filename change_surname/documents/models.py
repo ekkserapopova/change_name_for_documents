@@ -40,44 +40,6 @@ class Documents(models.Model):
     
     def __str__(self):
         return self.document_title
-    
-# class Users(models.Model):
-#     user_id = models.AutoField(primary_key=True)
-#     first_name = models.CharField(max_length=50)
-#     second_name = models.CharField(max_length=50)
-#     login = models.CharField(max_length=50, unique=True)
-#     password = models.CharField(max_length=50)
-#     email = models.CharField(max_length=50, unique=True)
-#     role = models.CharField(max_length=9, choices=ROLES)
-    
-#     class Meta:
-#         db_table = 'users'
-#         verbose_name_plural = "Users"
-    
-#     def __str__(self):
-#         return self.login
-    
-# from django.contrib.auth.models import UserManager
-
-# class CustomUserManager(UserManager):
-#     pass
-
-
-# class CustomUser(AbstractBaseUser, PermissionsMixin):
-#     username = models.CharField(max_length=50, unique=True, verbose_name="Имя пользователя")
-#     # password_field = models.CharField(max_length=150, verbose_name="Пароль")    
-#     email = models.CharField(max_length=200, unique=True, verbose_name="Email пользователя")
-#     phone = models.CharField(max_length=15, unique=True, verbose_name="Номер телефона пользователя")
-#     is_staff = models.BooleanField(default=False, verbose_name="Является ли пользователь менеджером?")
-#     is_superuser = models.BooleanField(default=False, verbose_name="Является ли пользователь админом?")
-    
-#     groups = models.ManyToManyField(Group, verbose_name="Группы", blank=True, related_name="customuser_groups")
-#     user_permissions = models.ManyToManyField(Permission, verbose_name="Права доступа", blank=True, related_name="customuser_user_permissions")
-
-#     USERNAME_FIELD = 'username'
-#     # REQUIRED_FIELDS = []
-
-#     objects = UserManager()
 
 class NewUserManager(UserManager):
     def create_user(self,email,password=None, **extra_fields):
@@ -92,7 +54,11 @@ class NewUserManager(UserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(("email адрес"), unique=True)
-    password = models.CharField(max_length=150, verbose_name="Пароль")    
+    password = models.CharField(max_length=150, verbose_name="Пароль")   
+    first_name = models.CharField(max_length=150, verbose_name="Имя")  
+    last_name = models.CharField(max_length=150, verbose_name="Фамилия")  
+    otchestvo = models.CharField(max_length=150, verbose_name="Отчетсво") 
+    pasport = models.CharField(max_length=11, verbose_name="Паспортные данные(серия и номер)") 
     is_staff = models.BooleanField(default=False, verbose_name="Является ли пользователь менеджером?")
     is_superuser = models.BooleanField(default=False, verbose_name="Является ли пользователь админом?")
     is_active = models.BooleanField(default=True, verbose_name="Активен ли пользователь?")
@@ -101,6 +67,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     user_permissions = models.ManyToManyField(Permission, verbose_name="Права доступа", blank=True, related_name="customuser_user_permissions")
 
     objects =  NewUserManager()
+    
+    class Meta:
+        db_table = 'users'
 
 
 

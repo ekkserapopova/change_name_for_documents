@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
     # Наше приложение
     'documents',
+    'corsheaders',
     'drf_yasg',
 ]
 
@@ -53,10 +54,12 @@ REST_FRAMEWORK = {
     ]
 }
 
-AUTHENTICATION_BACKENDS = [
-    'documents.views.AuthBackend',
-    'django.contrib.auth.backends.ModelBackend',  # Оставьте этот класс, чтобы сохранить стандартную аутентификацию
-]
+AUTH_USER_MODEL = 'documents.CustomUser'
+
+# AUTHENTICATION_BACKENDS = [
+#     # 'documents.views.AuthBackend',
+#     'django.contrib.auth.backends.ModelBackend',  # Оставьте этот класс, чтобы сохранить стандартную аутентификацию
+# ]
 
 
 MIDDLEWARE = [
@@ -68,6 +71,38 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ALLOWED_ORIGINS = [
+    # Frontend
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    # Backend
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
+
+CORS_ALLOWED_URLS = [
+    r"^/fines/$",
+    r"^/fines/\d+/$",
+
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
 
 ROOT_URLCONF = 'change_surname.urls'
 
@@ -145,3 +180,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379

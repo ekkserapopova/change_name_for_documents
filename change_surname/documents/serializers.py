@@ -30,5 +30,4 @@ class UserSerializer(serializers.ModelSerializer):
     is_superuser = serializers.BooleanField(default=False, required=False)
     class Meta:
         model = CustomUser
-        fields = ['email', 'password', 'is_staff', 'is_superuser']
-        # fields = "__all__"
+        fields = "__all__"
