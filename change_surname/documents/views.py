@@ -16,38 +16,92 @@ from drf_yasg.utils import swagger_auto_schema
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 import uuid
 from change_surname.settings import REDIS_HOST, REDIS_PORT
+from drf_yasg import openapi
+import requests 
+import os
 
 import redis # type: ignore
 session_storage = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
 
 
-client = Minio(endpoint="localhost:9000",   
+client = Minio(endpoint="127.0.0.1:9000",   
                access_key='minio',          
                secret_key='minio124',       
                secure=False) 
 
 
-@authentication_classes([BasicAuthentication, SessionAuthentication])
-@swagger_auto_schema(method='POST', request_body=DocumentsSerializer)
+
+dict = {'ё': 'yo', 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ж': 'zh',
+     'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p',
+     'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh',
+     'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'}
+
+
+# @authentication_classes([BasicAuthentication, SessionAuthentication])
+@swagger_auto_schema(
+    methods=['GET'],
+    manual_parameters=[
+        openapi.Parameter('title', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Document title'),
+        openapi.Parameter('minprice', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Minimum price'),
+        openapi.Parameter('maxprice', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Maximum price'),
+    ],
+    responses={
+        200: openapi.Response(
+            description="Documents",
+            schema=DocumentsSerializer(many=True),
+        ),
+    },
+)
+@swagger_auto_schema(
+    methods=['POST'],
+    request_body=DocumentsSerializer
+)
 @api_view(['Get', 'Post']) 
-def get_documents(request, format=None):
+def documents(request, format=None):
     """
     Возвращает список активных документов 
     """
     if request.method == 'GET':
-        print('get')
+        try:
+            ssid = request.COOKIES["session_id"]
+            
+        except:
+            ssid = None
+            
         query = request.GET.get("title")
         min_price = request.GET.get("minprice")
         max_price = request.GET.get("maxprice")
+        doc_status = request.GET.get('status')
         
+        if ssid is not None:
+            user_id = CustomUser.objects.get(email=session_storage.get(ssid).decode('utf-8')).id
+        else:
+            # print(1)
+            user_id = None
             
-        if query:
-            documents = Documents.objects.filter(
-                Q(document_status = 'active'),
-                Q(document_title__icontains = query.lower())
-            ).order_by('document_title')
+        if user_id:
+            try:
+                draft = NameChangeApplications.objects.filter(application_status='created', client_id=user_id)
+                print(draft[0].application_id)
+            except:
+                draft = None
+        else:
+            draft = None
+            
+        if doc_status:
+            documents = Documents.objects.filter(document_status = doc_status).order_by('document_title')
         else:
             documents = Documents.objects.filter(document_status = 'active').order_by('document_title')
+        
+        if query:
+            documents = documents.filter(
+                Q(document_title__icontains = query.lower())
+            )
+            
+        # if status:
+        #     documents = documents.filter(document_status = status)
+        # else:
+        #     documents = documents.filter(document_status = 'active')
             
         if min_price:
             if not min_price.isdigit():
@@ -58,8 +112,9 @@ def get_documents(request, format=None):
             if not max_price.isdigit():
                 min_price = 1000000
             documents = documents.filter(Q(document_price__lte = max_price))
-        
+        # print(documents)
         for doc in documents:
+            
             if doc.document_image == 'not_found.jpg':
                 url = client.get_presigned_url(
                     "GET",
@@ -68,20 +123,41 @@ def get_documents(request, format=None):
                 )
                 doc.document_image = url
                 continue
-            url = client.get_presigned_url(
-                "GET",
-                "documents",
-                f"{doc.document_name}.jpg",
-            )
+            else:
+                
+                url = client.get_presigned_url(
+                    "GET",
+                    "documents",
+                    doc.document_image,
+                )
+                print(url)
+            # print(1)
             doc.document_image = url
+            
         serializer = DocumentsSerializer(documents, many=True)
-        return Response(serializer.data)
+        if draft:
+            docs = {
+                'documents': serializer.data,
+                'draft_id': draft[0].application_id
+            }     
+        else:
+            docs = {
+                'documents': serializer.data,
+                'draft_id': -1
+            }  
+        # print(docs)
+        return Response(docs)
     
     if request.method == 'POST':
         try:
             ssid = request.COOKIES["session_id"]
         except:
             return Response({"error": "Нет доступа."}, status=403)
+        
+        dict = {'ё': 'yo', 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ж': 'zh',
+            'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p',
+            'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh',
+            'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'}
         user = CustomUser.objects.get(email=session_storage.get(ssid).decode('utf-8'))
         if not(user.is_staff or user.is_superuser):
             return Response({"error": "Нет доступа."}, status=403)
@@ -89,31 +165,41 @@ def get_documents(request, format=None):
         serializer = DocumentsSerializer(data=request.data)
         if serializer.is_valid():
             try:
+                
+                s = list(map(lambda x: dict.get(x, '-'), serializer.validated_data['document_title']))
+                name = ''.join(s)
+                serializer.validated_data['document_name'] = name
+                # serializer.validated_data['document_image'] = f"not_found.jpeg"
                 if 'document_image' not in serializer.validated_data:
                     client.stat_object(bucket_name='documents',     
                     object_name=f"not_found.jpg")
                 else:
                     client.stat_object(bucket_name='documents',     
-                        object_name=f"{serializer.validated_data['document_name']}.jpg")
+                        object_name=f"{serializer.validated_data['document_image']}")
             except:
-                client.fput_object(bucket_name='documents',  
-                        object_name=f"{serializer.validated_data['document_name']}.jpg",  
-                        file_path=serializer.validated_data['document_image'])
+                if 'document_image' in serializer.validated_data:
+                    file_path = os.path.join("/Users/ekksera/Desktop/rip_pictures",
+                                             serializer.validated_data['document_image'])
+                    print('add')
+                    client.fput_object(bucket_name='documents',
+                                       object_name=f"{serializer.validated_data['document_image']}",
+                                       file_path=file_path)
+                    print('add')
                 
             if 'document_image' not in serializer.validated_data:
                 serializer.validated_data['document_image'] = f"not_found.jpg"
             else:
-                serializer.validated_data['document_image'] = f"{serializer.validated_data['document_name']}.jpg"
+                serializer.validated_data['document_image'] = f"{serializer.validated_data['document_image']}"
             serializer.save()
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @permission_classes([IsManager])
-@authentication_classes([BasicAuthentication, SessionAuthentication])
+# @authentication_classes([BasicAuthentication, SessionAuthentication])
 @swagger_auto_schema(method='PUT', request_body=DocumentsSerializer)
 @api_view(['Get', 'Put', 'DELETE']) 
-def get_document(request, pk, format=None):
+def document(request, pk, format=None):
     if request.method == 'GET':
         document = get_object_or_404(Documents, pk=pk)
         print(document.document_image)
@@ -153,16 +239,23 @@ def get_document(request, pk, format=None):
         serializer = DocumentsSerializer(document, data=request.data, partial=True)
         if serializer.is_valid():
             try:
-                if document.document_image != request.data['document_image']:
-                    client.remove_object("documents", f"{document.document_image}")
+                if request.data['document_image'] != document.document_image:
+                    # client.remove_object("documents", f"{document.document_image}")
+                    print(1)
+                    file_path = os.path.join("/Users/ekksera/Desktop/rip_pictures",
+                                            request.data['document_image'])
                     client.fput_object(bucket_name='documents',  
-                                        object_name=f"{document.document_name}.jpg",  
-                                        file_path=serializer.validated_data['document_image'])
-                    serializer.validated_data['document_image'] = f"{document.document_name}.jpg"
+                                            object_name=f"{request.data['document_image']}",  
+                                            file_path=file_path)
+                    serializer.validated_data['document_image'] = f"{request.data['document_image']}"
+                serializer.save()
             except:
+                serializer.validated_data['document_image'] = document.document_image
                 serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
     elif request.method == 'DELETE':
         """
         Удаляет информацию о документе - устанавливает статус 'deleted'
@@ -187,6 +280,7 @@ def get_document(request, pk, format=None):
         return Response(serializer.data)
 
 
+@csrf_protect
 @permission_classes([IsAuthenticated])
 @authentication_classes([BasicAuthentication, SessionAuthentication])
 @swagger_auto_schema(method='post', request_body=ApplicationsSerializer)
@@ -198,7 +292,10 @@ def post_application(request, pk, format=None):
     try:
         ssid = request.COOKIES["session_id"]
     except:
-        return Response(status=status.HTTP_403_FORBIDDEN)
+        try: 
+            ssid = request.data["session_id"]
+        except:
+            return Response(status=status.HTTP_403_FORBIDDEN)
     user = CustomUser.objects.get(email=session_storage.get(ssid).decode('utf-8')).id
     print(user)
     document = get_object_or_404(Documents, pk=pk)
@@ -228,7 +325,15 @@ def post_application(request, pk, format=None):
 
 
 @permission_classes([IsAuthenticated])
-@authentication_classes([SessionAuthentication])
+@swagger_auto_schema(
+    method='GET',
+    manual_parameters=[
+        openapi.Parameter('status', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Status'),
+        openapi.Parameter('startdate', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='From'),
+        openapi.Parameter('enddate', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='To'),
+    ],
+)
+@csrf_exempt
 @api_view(['Get']) 
 def get_applications(request, format=None):
     """
@@ -238,11 +343,13 @@ def get_applications(request, format=None):
         ssid = request.COOKIES["session_id"]
     except:
         return Response({"error": "Нет доступа."}, status=403)
+    
     user = CustomUser.objects.get(email=session_storage.get(ssid).decode('utf-8'))
 
     startdate = request.GET.get("startdate")
     enddate = request.GET.get("enddate")
     statuses = request.GET.get("status")
+    
     if user.is_staff or user.is_superuser:
         applications = NameChangeApplications.objects.all()
     else:
@@ -269,6 +376,8 @@ def get_applications(request, format=None):
     result = []
     for application in applications:
         serializer = ApplicationsSerializer(application)
+        # client = CustomUser.objects.get(id=application.client_id)
+        # print(application.client_id.email)
         docs_apps = DocumentsApplications.objects.filter(application_id=application.application_id)
         docs_apps_serializer = DocumentsApplicationsSerializer(docs_apps, many=True)
         filters = Q()
@@ -281,6 +390,7 @@ def get_applications(request, format=None):
         serializer_documents = DocumentsSerializer(documents, many=True)
         docs_apps_data = {
             'application': serializer.data,
+            "client_email": application.client_id.email,
             'documents': serializer_documents.data
         }       
         result.append(docs_apps_data)
@@ -288,10 +398,10 @@ def get_applications(request, format=None):
 
 
 @permission_classes([IsAuthenticated])
-@authentication_classes([BasicAuthentication, SessionAuthentication])
+# @authentication_classes([BasicAuthentication, SessionAuthentication])
 @swagger_auto_schema(method='put', request_body=ApplicationsSerializer)
 @api_view(['Get', 'Put', 'Delete']) 
-def get_application(request, pk, format=None):
+def application(request, pk, format=None):
     """
     Возвращает информацию об одной заявке
     """
@@ -321,6 +431,7 @@ def get_application(request, pk, format=None):
         
         docs_apps_data = {
             'application': serializer.data,
+            "client_email": application.client_id.email,
             'documents': serializer_documents.data
         }
             
@@ -364,7 +475,7 @@ def get_application(request, pk, format=None):
 
    
 @permission_classes([IsManager])
-@authentication_classes([BasicAuthentication, SessionAuthentication])
+# @authentication_classes([BasicAuthentication, SessionAuthentication])
 @swagger_auto_schema(method='put', request_body=ApplicationsSerializer)
 @api_view(['PUT']) 
 def put_applications_moderator(request, pk, format=None):
@@ -391,7 +502,7 @@ def put_applications_moderator(request, pk, format=None):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @permission_classes([IsAuthenticated])
-@authentication_classes([BasicAuthentication, SessionAuthentication])  
+# @authentication_classes([BasicAuthentication, SessionAuthentication])  
 @swagger_auto_schema(method='put', request_body=ApplicationsSerializer)
 @api_view(['PUT']) 
 def put_applications_client(request, pk, format=None):
@@ -415,13 +526,25 @@ def put_applications_client(request, pk, format=None):
     serializer = ApplicationsSerializer(application, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
+        other_service_url = 'http://localhost:8080/name'
+        other_service_data = {'application_id': application.application_id}
+        other_service_response = requests.post(other_service_url, json=other_service_data)
+
+        # Проверить успешность запроса к другому сервису
+        if other_service_response.status_code == 200:
+            return Response(serializer.data)
+        else:
+            return Response({"error": "Не удалось обновить в другом сервисе"}, status=500)
+
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+@csrf_exempt
 @permission_classes([IsAuthenticated])
-@authentication_classes([BasicAuthentication, SessionAuthentication])     
-@api_view(["Delete"]) 
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@api_view(['Delete']) 
 def delete_document_application(request, document_id, application_id, formate=None):
     try:
         ssid = request.COOKIES["session_id"]
@@ -431,7 +554,7 @@ def delete_document_application(request, document_id, application_id, formate=No
     if user.is_staff or user.is_superuser:
         return Response({"error": "Нет доступа"}, status=403)
     else:
-        document_application = get_object_or_404(NameChangeApplications, document_id=document_id, application_id=application_id, client_id=user.id)
+        document_application = get_object_or_404(DocumentsApplications, document_id=document_id, application_id=application_id)
     # document_application = get_object_or_404(DocumentsApplications, document_id=document_id, application_id=application_id)
     document_application.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
@@ -456,6 +579,10 @@ class UserViewSet(viewsets.ModelViewSet):
             print(serializer.data)
             self.model_class.objects.create_user(email=serializer.data['email'],
                                      password=serializer.data['password'],
+                                     first_name=serializer.data['first_name'],
+                                     last_name=serializer.data['last_name'],
+                                     otchestvo=serializer.data['otchestvo'],
+                                     pasport=serializer.data['pasport'],
                                      is_superuser=serializer.data['is_superuser'],
                                      is_staff=serializer.data['is_staff'])
             return Response({'status': 'Success'}, status=200)
@@ -476,14 +603,19 @@ def login_view(request):
     if user is not None:
         random_key = str(uuid.uuid4())
         session_storage.set(random_key, email)
-
-        response = HttpResponse("{'status': 'ok'}")
-        response.set_cookie("session_id", random_key)
-
+        data = {
+            'id': user.id,
+            'is_moderator': user.is_staff,
+            'session_id': random_key
+        }
+        response = Response(data, status=status.HTTP_201_CREATED)
+        # response.set_cookie("session_id", random_key)
+        response.set_cookie("session_id", random_key, samesite='None', secure=True)
+        # response.delete_cookie('sessionid')
         return response
     
     else:
-        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+        return JsonResponse({'status': 'Error', 'message': 'Login failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
 @permission_classes([AllowAny])
@@ -492,10 +624,17 @@ def login_view(request):
 @swagger_auto_schema(method='post')
 @api_view(['Post'])
 def logout_view(request):
+    # session_storage.flushdb()
+    session_storage.delete("fa513344-fcc6-41f6-ba8c-236d51201579")
+    print("1")
     try:
         ssid = request.COOKIES["session_id"]
-    except:
-        return HttpResponse("{'status': 'error', 'error': 'logout failed'}")
+    except Exception as e:
+        try: 
+            ssid = request.data["session_id"]
+        except:
+            print(request.COOKIES)
+            return HttpResponse("{'status': 'error', 'error': 'logout failed'}")
     print(ssid)
     session_storage.delete(ssid)
     logout(request._request)
@@ -503,3 +642,46 @@ def logout_view(request):
     response.delete_cookie("session_id")
     return response
 
+@permission_classes([AllowAny])
+@authentication_classes([])
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@csrf_exempt
+@api_view(['POST'])
+def get_user(request):
+    print(0)
+    try:
+        ssid = request.COOKIES["session_id"]
+    except Exception as e:
+        try: 
+            ssid = request.data["session_id"]
+            print(000)
+        except:
+            print(request.COOKIES)
+            return HttpResponse("{'status': 'error', 'error': 'logout failed'}")
+    if session_storage.exists(ssid):
+        user = CustomUser.objects.get(email=session_storage.get(ssid).decode('utf-8'))
+        data = {
+                'id': user.id,
+                'is_moderator': user.is_staff,
+                'email' : user.email,
+            }
+        return Response(data, status=status.HTTP_200_OK)
+    else:
+        return Response({'status': 'Error', 'message': 'Session does not exist'})
+
+#for async
+PASSWORD = 'documents_for_change'
+
+@api_view(["PUT"])
+def update_mfc(request, pk):
+    mfc_status = request.data['mfc_status']
+    password = request.data["password"]
+    if password != PASSWORD:
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    try:
+        app = NameChangeApplications.objects.get(pk=pk)
+        app.mfc_status = mfc_status
+        app.save()
+        return Response(status=status.HTTP_200_OK)
+    except app.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)

@@ -14,6 +14,7 @@ ROLES = [
 STATUS_DOCS = [
     ('active', 'Действует'),
     ('deleted', 'Удалено'),
+    ('trash', 'В корзине')
 ]
 
 STATUS_APPS = [
@@ -27,12 +28,12 @@ STATUS_APPS = [
 class Documents(models.Model):
     document_id = models.AutoField(primary_key=True)
     document_title = models.CharField(max_length=100, unique=True)
-    document_name = models.CharField(max_length=100, unique=True)
+    document_name = models.CharField(max_length=100, null=True)
     document_overview = models.TextField(blank=True)
     document_description = models.TextField(blank=True)
-    document_image = models.CharField(max_length=10000, default='not_found.jpg')
+    document_image = models.CharField(max_length=10000, default='not_found.jpg', blank=True, null=True)
     document_price = models.FloatField()
-    document_status = models.CharField(max_length=20,choices=STATUS_DOCS)
+    document_status = models.CharField(max_length=20,choices=STATUS_DOCS, default='active', null=True)
     
     class Meta:
         db_table = 'documents'
@@ -83,6 +84,7 @@ class NameChangeApplications(models.Model):
     new_surname = models.CharField(max_length=50)
     reason_for_change = models.TextField()
     application_status = models.CharField(max_length=20,choices=STATUS_APPS, default='created')
+    mfc_status = models.CharField(max_length=15, default=" ")
     
     class Meta:
         db_table = 'name_change_applications'

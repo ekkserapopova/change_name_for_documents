@@ -17,6 +17,12 @@ class ApplicationsSerializer(serializers.ModelSerializer):
         model = NameChangeApplications
         # Поля, которые мы сериализуем
         fields = "__all__"
+    def get_client_email(self, obj):
+        try:
+            user = CustomUser.objects.get(id=obj.client_id)
+            return user.email
+        except CustomUser.DoesNotExist:
+            return None
         
 class DocumentsApplicationsSerializer(serializers.ModelSerializer):
     class Meta:

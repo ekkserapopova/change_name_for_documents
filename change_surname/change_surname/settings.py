@@ -50,7 +50,7 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
     ]
 }
 
@@ -67,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -81,13 +82,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
+
+CORS_ALLOW_ORIGIN_WHITELIST = [
+    "http://localhost:3000",  
+]
+
+SESSION_COOKIE_SECURE = False
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
 
-CORS_ALLOWED_URLS = [
-    r"^/fines/$",
-    r"^/fines/\d+/$",
+SESSION_COOKIE_SAMESITE = None
 
-]
+# Установите SameSite=None для CSRF-куки
+CSRF_COOKIE_SAMESITE = None
 
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -99,6 +106,7 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "cookie"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
