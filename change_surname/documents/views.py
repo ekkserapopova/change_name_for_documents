@@ -675,6 +675,8 @@ PASSWORD = 'documents_for_change'
 @api_view(["PUT"])
 def update_mfc(request, pk):
     mfc_status = request.data['mfc_status']
+    if mfc_status not in ("Отправлена","Не отправлена"):
+        return Response({"error": "Неверное значение статуса МФЦ"}, status=400)
     password = request.data["password"]
     if password != PASSWORD:
         return Response(status=status.HTTP_403_FORBIDDEN)
