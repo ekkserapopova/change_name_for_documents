@@ -526,7 +526,7 @@ def put_applications_client(request, pk, format=None):
     serializer = ApplicationsSerializer(application, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
-        other_service_url = 'http://localhost:8080/name'
+        other_service_url = 'http://localhost:8080/mfc'
         other_service_data = {'application_id': application.application_id}
         other_service_response = requests.post(other_service_url, json=other_service_data)
 
